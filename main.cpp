@@ -29,10 +29,10 @@ freely, subject to the following restrictions:
 #include <string>
 #include <fstream>
 #include <cstdint>
-//#include <io.h>
+#include <io.h>
 #include <dirent.h>
 #include <errno.h>
-//#include "windows.h"
+#include "windows.h"
 /*
 3 ways to decode a PNG from a file to RGBA pixel data (and 2 in-memory ways).
 */
@@ -41,7 +41,7 @@ freely, subject to the following restrictions:
 
 //Example 1
 //Decode from disk to raw pixels with a single function call
-bool dir_exist_check(const char *folder_name, bool &error_flag)
+bool dir_exist_check(const char *folder_name, bool &error_flag, std::string &error_message)
 {
     DIR *dir = opendir(folder_name); //Пытаемся открыть директорию с исходными картинками
     if (dir)                         //Проверка существования директории
@@ -66,10 +66,12 @@ bool dir_exist_check(const char *folder_name, bool &error_flag)
         {
             /* Directory has not created */
             std::cout << "Не удалость создать директорию 'PNGfolder'" << std::endl;
+            std::string fail_folder_name = folder_name; 
+            error_message = "Критическая ошибка: не удалость создать директорию " + fail_folder_name;
             error_flag = true; //Устанавливаем флаг ошибки
         }
     }
-
+    error_message = "!!!";
     return 0;
 }
 
@@ -154,9 +156,9 @@ int main(int argc, char *argv[])
     std::string error_message = "Неизвестная ошибка";
 
     if (!error_flag)
-        dir_exist_check("PNGfolder", error_flag);
+        dir_exist_check("PNGfolder", error_flag, error_message);
     if (!error_flag)
-        dir_exist_check("Hfolder", error_flag);
+        dir_exist_check("Hfolder", error_flag, error_message);
 
     if (error_flag)
     {
