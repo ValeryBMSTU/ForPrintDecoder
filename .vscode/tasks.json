@@ -8,7 +8,7 @@
             "type": "shell",
             "command": "g++",
             "args": [
-                "-g", "main.cpp", "lodepng.cpp", "-lstdc++fs"
+                "-g", "main.cpp", "lodepng.cpp", "-std=c++17"
             ],
             
             "group": {
