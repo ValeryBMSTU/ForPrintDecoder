@@ -26,11 +26,13 @@ freely, subject to the following restrictions:
 #include "lodepng.h"
 #include <iostream>
 #include "stdlib.h"
+#include <string>
 #include <fstream>
 #include <cstdint>
 #include <io.h>
 #include <dirent.h>
 #include <errno.h>
+#include "windows.h"
 // #include <experimental/filesystem> // C++-standard header file name
 // #include <filesystem> // Microsoft-specific implementation header file name
 // using namespace std::experimental::filesystem::v1;
@@ -117,36 +119,43 @@ void decodeWithState(const char *filename)
 
 int main(int argc, char *argv[])
 {
-    FILE *folder_check = NULL;
+    FILE *file = NULL; //Переменная для хранения названия файла
+    DIR *dir = NULL; //Переменная для хранения названия директории
+    bool error_flag = false; //Флаг для ошибок
+    std::string error_message = "Неизвестная ошибка";
 
-    DIR *dir = opendir("PNGfolder11");
-    if (dir)
+    dir = opendir("PNGfolder"); //Пытаемся открыть директорию с исходными картинками
+    if (dir) //Проверка существования директории
     {
         /* Directory exists. */
-        closedir(dir);
+        std::cout << "Директория 'PNGfolder' существует." << std::endl;
+        closedir(dir); //Закрытие директории (иначе утечка памяти)
     }
-    else if (ENOENT == errno)
+    else 
     {
-        /* Directory does not exist. */
-    }
-    else
-    {
-        /* opendir() failed for some other reason. */
+        /* Directory dose not exist */
+        std::cout << "Директория 'PNGfolder' не существует" << std::endl;
+        CreateDirectory( "PNGfolder", NULL ); //Создание новой директории
+        dir = opendir("PNGfolder"); //Пытаемся открыть созданную директорию
+        if (dir) //Проверка существования новой директории
+        {
+            /* Directory has created */
+            std::cout << "Директория 'PNGfolder' успешно создана" << std::endl;
+            closedir(dir); //Закрытие директории (иначе утечка памяти)
+        }
+        else 
+        {
+            /* Directory has not created */
+            std::cout << "Не удалость создать директорию 'PNGfolder'" << std::endl;
+            error_flag = true; //Устанавливаем флаг ошибки
+        }
     }
 
-    //folder_check = fopen("test.png", "r");
-    // if (fs::exists("PNGfolder"))
-    //     std::cout<<std::endl<<"Папка не существует";
-    // else
-    //     std::cout<<std::endl<<"Папка существует";
-    // if (fs::exists("Hfolder"))
-    //     std::cout<<std::endl<<"Папка не существует";
-    // else
-    //     std::cout<<std::endl<<"Папка существует";
-    // if (fs::exists("PGMfolder"))
-    //     std::cout<<std::endl<<"Папка не существует";
-    // else
-    //     std::cout<<std::endl<<"Папка существует";
+    if (error_flag)
+    {
+        std::cout << error_message << std::endl;
+        return -1;
+    }
 
     const char *filename = argc > 1 ? argv[1] : "test.png";
     decodeOneStep(filename);
