@@ -22,7 +22,7 @@ freely, subject to the following restrictions:
     3. This notice may not be removed or altered from any source
     distribution.
 */
-
+#include <locale.h>
 #include "lodepng.h"
 #include <iostream>
 #include "stdlib.h"
@@ -47,31 +47,30 @@ bool dir_exist_check(const char *folder_name, bool &error_flag, std::string &err
     if (dir)                         //Проверка существования директории
     {
         /* Directory exists. */
-        std::cout << "Директория 'PNGfolder' существует." << std::endl;
+        std::cout << "Directory '" << folder_name << "' exsists." << std::endl;
         closedir(dir); //Закрытие директории (иначе утечка памяти)
     }
     else
     {
         /* Directory dose not exist */
-        std::cout << "Директория 'PNGfolder' не существует" << std::endl;
+        std::cout << "Directory '" << folder_name << "' does not exist" << std::endl;
         CreateDirectory(folder_name, NULL); //Создание новой директории
         dir = opendir(folder_name);         //Пытаемся открыть созданную директорию
         if (dir)                            //Проверка существования новой директории
         {
             /* Directory has created */
-            std::cout << "Директория 'PNGfolder' успешно создана" << std::endl;
+            std::cout << "Directory '" << folder_name << "' has created" << std::endl;
             closedir(dir); //Закрытие директории (иначе утечка памяти)
         }
         else
         {
             /* Directory has not created */
-            std::cout << "Не удалость создать директорию 'PNGfolder'" << std::endl;
+            std::cout << "Directory '" << folder_name << "' did not creat" << std::endl;
             std::string fail_folder_name = folder_name; 
-            error_message = "Критическая ошибка: не удалость создать директорию " + fail_folder_name;
+            error_message = "Critical error: try to create directory failed" + fail_folder_name;
             error_flag = true; //Устанавливаем флаг ошибки
         }
     }
-    error_message = "!!!";
     return 0;
 }
 
@@ -150,6 +149,8 @@ void decodeWithState(const char *filename)
 
 int main(int argc, char *argv[])
 {
+    setlocale(LC_ALL,"Rus");
+
     FILE *file = NULL;       //Переменная для хранения названия файла
     DIR *dir = NULL;         //Переменная для хранения названия директории
     bool error_flag = false; //Флаг для ошибок
@@ -160,12 +161,30 @@ int main(int argc, char *argv[])
     if (!error_flag)
         dir_exist_check("Hfolder", error_flag, error_message);
 
-    if (error_flag)
+    if (!error_flag)
+    {
+        TCHAR buffer[MAX_PATH];
+        GetCurrentDirectory(sizeof(buffer), buffer);
+        strcat(buffer, "\\PNGfolder\\*");
+
+        std::cout << buffer << std::endl;
+
+        setlocale(LC_ALL, "");
+        HANDLE search_location;
+        WIN32_FIND_DATA founded_file;
+        search_location = FindFirstFile(buffer, &founded_file);
+        while (FindNextFile(search_location, &founded_file) != NULL)
+        {
+        std::cout << founded_file.cFileName << "\n";
+        }
+    }
+    else
     {
         std::cout << error_message << std::endl;
         return -1;
     }
-
+    
+    
     const char *filename = argc > 1 ? argv[1] : "test.png";
     decodeOneStep(filename);
     system("pause");
