@@ -22,7 +22,6 @@ freely, subject to the following restrictions:
     3. This notice may not be removed or altered from any source
     distribution.
 */
-#include <locale.h>
 #include "lodepng.h"
 #include <iostream>
 #include "stdlib.h"
@@ -41,7 +40,7 @@ freely, subject to the following restrictions:
 
 //Example 1
 //Decode from disk to raw pixels with a single function call
-bool dir_exist_check(const char *folder_name, bool &error_flag, std::string &error_message)
+int dir_exist_check(const char *folder_name, bool &error_flag, std::string &error_message)
 {
     DIR *dir = opendir(folder_name); //Пытаемся открыть директорию с исходными картинками
     if (dir)                         //Проверка существования директории
@@ -70,6 +69,28 @@ bool dir_exist_check(const char *folder_name, bool &error_flag, std::string &err
             error_message = "Critical error: try to create directory failed" + fail_folder_name;
             error_flag = true; //Устанавливаем флаг ошибки
         }
+    }
+    return 0;
+}
+
+int dir_image_directory(const char *folder_name)
+{
+    TCHAR buffer[MAX_PATH];
+    GetCurrentDirectory(sizeof(buffer), buffer);
+    strcat(buffer, "\\");
+    strcat(buffer, folder_name);
+    strcat(buffer, "\\*");
+    //strcat(buffer, "\\PNGfolder\\*");
+
+    std::cout << buffer << std::endl;
+
+    setlocale(LC_ALL, "");
+    HANDLE search_location;
+    WIN32_FIND_DATA founded_file;
+    search_location = FindFirstFile(buffer, &founded_file);
+    while (FindNextFile(search_location, &founded_file) != NULL)
+    {
+        std::cout << founded_file.cFileName << "\n";
     }
     return 0;
 }
@@ -149,40 +170,25 @@ void decodeWithState(const char *filename)
 
 int main(int argc, char *argv[])
 {
-    setlocale(LC_ALL,"Rus");
 
     FILE *file = NULL;       //Переменная для хранения названия файла
     DIR *dir = NULL;         //Переменная для хранения названия директории
     bool error_flag = false; //Флаг для ошибок
-    std::string error_message = "Неизвестная ошибка";
+    std::string error_message = "Unknown error";
 
     if (!error_flag)
         dir_exist_check("PNGfolder", error_flag, error_message);
     if (!error_flag)
         dir_exist_check("Hfolder", error_flag, error_message);
 
+    int png_count
+
     if (!error_flag)
-    {
-        TCHAR buffer[MAX_PATH];
-        GetCurrentDirectory(sizeof(buffer), buffer);
-        strcat(buffer, "\\PNGfolder\\*");
+        dir_image_directory("PNGfolder");
+    if (!error_flag)
+        dir_image_directory("Hfolder");
 
-        std::cout << buffer << std::endl;
-
-        setlocale(LC_ALL, "");
-        HANDLE search_location;
-        WIN32_FIND_DATA founded_file;
-        search_location = FindFirstFile(buffer, &founded_file);
-        while (FindNextFile(search_location, &founded_file) != NULL)
-        {
-        std::cout << founded_file.cFileName << "\n";
-        }
-    }
-    else
-    {
-        std::cout << error_message << std::endl;
-        return -1;
-    }
+    char **image_names = new char* []
     
     
     const char *filename = argc > 1 ? argv[1] : "test.png";
