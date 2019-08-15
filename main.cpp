@@ -181,15 +181,10 @@ int main(int argc, char *argv[])
     if (!error_flag)
         dir_exist_check("Hfolder", error_flag, error_message);
 
-    int png_count
-
     if (!error_flag)
         dir_image_directory("PNGfolder");
     if (!error_flag)
         dir_image_directory("Hfolder");
-
-    char **image_names = new char* []
-    
     
     const char *filename = argc > 1 ? argv[1] : "test.png";
     decodeOneStep(filename);
