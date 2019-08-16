@@ -1,6 +1,0 @@
-AGE_H_
-#define IMAGE_H_
-
-#define COLS 
-
-static const byte IMAGE[COLS][8] PROGMEM = {

@@ -27,10 +27,10 @@ freely, subject to the following restrictions:
 #include "stdlib.h"
 #include <string>
 #include <fstream>
-#include <cstdint>
-#include <io.h>
+//#include <cstdint>
+//#include <io.h>
 #include <dirent.h>
-#include <errno.h>
+//#include <errno.h>
 #include "windows.h"
 #include <vector>
 /*
@@ -137,6 +137,7 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
 /* Функция, выполняющая преобразование файлов png в h */
 int convert_png_to_h(int png_count, std::vector <std::string> &list)
 {
+    std::cout << std::endl;
     for (int i = 0; i < png_count; i++)
     {
         /* Формируем имя для будущего файла h */
@@ -152,6 +153,7 @@ int convert_png_to_h(int png_count, std::vector <std::string> &list)
 
         decodeOneStep(png_filename.c_str(), h_filename.c_str()); //Декодирует png-рисунок и создает h-файл с таким же названием
     }
+    std::cout << std::endl;
     return 0;
 }
 
@@ -218,9 +220,10 @@ int main(int argc, char *argv[])
     if (!error_flag)
     {
         png_count = dir_image_directory("PNGfolder", png_format, png_list);
-        h_count = dir_image_directory("Hfolder", h_format, h_list);
     
         convert_png_to_h(png_count, png_list);
+
+        h_count = dir_image_directory("Hfolder", h_format, h_list);
     }
 
     //const char *filename = argc > 1 ? argv[1] : "test.png";
@@ -238,7 +241,7 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
 
 
     //decode
-    unsigned error = lodepng::decode(image, width, height, png_filename);
+    unsigned error = lodepng::decode(image, width, height, png_filename); //Сложная функция для декодирования png файла. Взята с просторов интернета. В подробности работы вникать не рекомендуется.
 
     //if there's an error, display it
     if (error)
@@ -252,27 +255,31 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
  
     if (ptrFile != NULL)
     {
+        std::cout << "Convert process " << png_filename << " --> " << h_filename << ": "; 
+
+        /* Формируем первую фоловину файла h */
         std::string head_str= "#ifndef IMAGE_H_\n#define IMAGE_H_\n\n#define COLS ";
         head_str = head_str + std::to_string(height);
         head_str = head_str + "\n\nstatic const byte IMAGE[COLS][";
         head_str = head_str + std::to_string(width);
         head_str = head_str + "] PROGMEM = {\n{";
 
-        fputs(head_str.c_str(), ptrFile);
+        fputs(head_str.c_str(), ptrFile); 
 
+        /* Формируем матрицу пикселей */
         for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
         {
             curent_width++;
             if (*it == black)
             {
-                fputs("0b00000000", ptrFile);
+                fputs("0b00000000", ptrFile); //Черный пиксель
             }
             else
             {
-                fputs("0b11111111", ptrFile);
+                fputs("0b11111111", ptrFile); //Белый пиксель
             }
             
-            if (curent_width == width)
+            if (curent_width == width) //Условия для перехода к формированию следующей строки пикселей
             {
                 curent_width = 0;
                 curent_hight++;
@@ -291,7 +298,8 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
                     fputs(",", ptrFile);
             }
         }
-        fputs("\n};\n\n#endif\n", ptrFile);
-        fclose (ptrFile);
+        fputs("\n};\n\n#endif\n", ptrFile); //Добавляем служебную информацию в конец файла
+        fclose (ptrFile); //Заканчиваем формирование файла и закрываем его
+        std::cout << "SUCCESS." << std::endl;
     }
 }
