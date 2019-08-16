@@ -73,7 +73,7 @@ int dir_exist_check(const char *folder_name, bool &error_flag, std::string &erro
     return 0;
 }
 
-int dir_image_directory(const char *folder_name)
+int dir_image_directory(const char *folder_name, const char *format)
 {
     TCHAR buffer[MAX_PATH];
     GetCurrentDirectory(sizeof(buffer), buffer);
@@ -87,12 +87,22 @@ int dir_image_directory(const char *folder_name)
     setlocale(LC_ALL, "");
     HANDLE search_location;
     WIN32_FIND_DATA founded_file;
+    int curent_format_count = 0;
+
+
     search_location = FindFirstFile(buffer, &founded_file);
     while (FindNextFile(search_location, &founded_file) != NULL)
     {
         std::cout << founded_file.cFileName << "\n";
+
+        std::string file_name = founded_file.cFileName;
+        int pos = -1;
+        if( (pos = file_name.find(format) ) != -1 )
+        {
+            curent_format_count++;
+        }
     }
-    return 0;
+    return curent_format_count;
 }
 
 void decodeOneStep(const char *filename)
@@ -175,16 +185,20 @@ int main(int argc, char *argv[])
     DIR *dir = NULL;         //Переменная для хранения названия директории
     bool error_flag = false; //Флаг для ошибок
     std::string error_message = "Unknown error";
+    char png_format[] = ".png\0";
+    char  h_format[] = ".h\0";
 
     if (!error_flag)
         dir_exist_check("PNGfolder", error_flag, error_message);
     if (!error_flag)
         dir_exist_check("Hfolder", error_flag, error_message);
 
+    int png_count = 0, h_count = 0;
+
     if (!error_flag)
-        dir_image_directory("PNGfolder");
+        png_count = dir_image_directory("PNGfolder", png_format);
     if (!error_flag)
-        dir_image_directory("Hfolder");
+        h_count = dir_image_directory("Hfolder", h_format);
     
     const char *filename = argc > 1 ? argv[1] : "test.png";
     decodeOneStep(filename);
