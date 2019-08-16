@@ -136,7 +136,7 @@ int convert_png_to_h(int png_count, std::vector <std::string> &list)
         strcat(str, ".h"); 
 
         std::string png_filename = "PNGfolder\\" + list[i];
-        std::string h_filename = "Hfolder\\" + str;
+        std::string h_filename = "Hfolder\\" + std::string(str);
         decodeOneStep(png_filename.c_str(), h_filename.c_str());
     }
     //decodeOneStep(filename);
@@ -221,6 +221,9 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
 {
     std::vector<unsigned char> image; //the raw pixels
     unsigned width, height;
+    const unsigned char black = 0;
+    const unsigned char white = 0;
+
 
     //decode
     unsigned error = lodepng::decode(image, width, height, png_filename);
@@ -232,25 +235,51 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
     //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
 
     int curent_width = 0;
+    int curent_hight = 0;
     FILE * ptrFile = fopen(h_filename, "w");
  
     if (ptrFile != NULL)
     {
-        std::string head_str= "#ifndef IMAGE_H_\n#define IMAGE_H_\n\n#define COLS " + height;
-        head_str = head_str + "\n\nstatic const byte IMAGE[COLS][8] PROGMEM = {\n";
+        std::string head_str= "#ifndef IMAGE_H_\n#define IMAGE_H_\n\n#define COLS ";
+        head_str = head_str + std::to_string(height);
+        head_str = head_str + "\n\nstatic const byte IMAGE[COLS][";
+        head_str = head_str + std::to_string(width);
+        head_str = head_str + "] PROGMEM = {\n{";
+        
         fputs(head_str.c_str(), ptrFile);
 
         for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
         {
-            if (curent_width == width)
+            curent_width++;
+            if (*it == black)
             {
-                curent_width = 0;
+                fputs("0b00000000", ptrFile);
             }
             else
             {
-                curent_width++;
+                fputs("0b11111111", ptrFile);
+            }
+            
+            if (curent_width == width)
+            {
+                curent_width = 0;
+                curent_hight++;
+                if (curent_hight != 10)
+                {
+                    fputs("},\n{", ptrFile);
+                }
+                else
+                {
+                    fputs("}", ptrFile);
+                }
+            }
+            else
+            {
+                if (curent_width != width)
+                    fputs(",", ptrFile);
             }
         }
+        fputs("\n};\n\n#endif\n", ptrFile);
         fclose (ptrFile);
     }
 
