@@ -32,6 +32,7 @@ freely, subject to the following restrictions:
 #include <dirent.h>
 #include <errno.h>
 #include "windows.h"
+#include <vector>
 /*
 3 ways to decode a PNG from a file to RGBA pixel data (and 2 in-memory ways).
 */
@@ -73,14 +74,13 @@ int dir_exist_check(const char *folder_name, bool &error_flag, std::string &erro
     return 0;
 }
 
-int dir_image_directory(const char *folder_name, const char *format)
+int dir_image_directory(const char *folder_name, const char *format, std::vector <std::string> &list)
 {
     TCHAR buffer[MAX_PATH];
     GetCurrentDirectory(sizeof(buffer), buffer);
     strcat(buffer, "\\");
     strcat(buffer, folder_name);
     strcat(buffer, "\\*");
-    //strcat(buffer, "\\PNGfolder\\*");
 
     std::cout << buffer << std::endl;
 
@@ -88,7 +88,6 @@ int dir_image_directory(const char *folder_name, const char *format)
     HANDLE search_location;
     WIN32_FIND_DATA founded_file;
     int curent_format_count = 0;
-
 
     search_location = FindFirstFile(buffer, &founded_file);
     while (FindNextFile(search_location, &founded_file) != NULL)
@@ -100,6 +99,7 @@ int dir_image_directory(const char *folder_name, const char *format)
         if( (pos = file_name.find(format) ) != -1 )
         {
             curent_format_count++;
+            list.push_back(file_name);
         }
     }
     return curent_format_count;
@@ -181,8 +181,8 @@ void decodeWithState(const char *filename)
 int main(int argc, char *argv[])
 {
 
-    FILE *file = NULL;       //Переменная для хранения названия файла
-    DIR *dir = NULL;         //Переменная для хранения названия директории
+    //FILE *file = NULL;       //Переменная для хранения названия файла
+    //DIR *dir = NULL;         //Переменная для хранения названия директории
     bool error_flag = false; //Флаг для ошибок
     std::string error_message = "Unknown error";
     char png_format[] = ".png\0";
@@ -194,11 +194,13 @@ int main(int argc, char *argv[])
         dir_exist_check("Hfolder", error_flag, error_message);
 
     int png_count = 0, h_count = 0;
+    std::vector <std::string> png_list;
+    std::vector <std::string> h_list;
 
     if (!error_flag)
-        png_count = dir_image_directory("PNGfolder", png_format);
+        png_count = dir_image_directory("PNGfolder", png_format, png_list);
     if (!error_flag)
-        h_count = dir_image_directory("Hfolder", h_format);
+        h_count = dir_image_directory("Hfolder", h_format, h_list);
     
     const char *filename = argc > 1 ? argv[1] : "test.png";
     decodeOneStep(filename);
