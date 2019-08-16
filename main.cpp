@@ -43,6 +43,7 @@ freely, subject to the following restrictions:
 //Decode from disk to raw pixels with a single function call
 void decodeOneStep(const char *, const char *);
 
+/* Функция для удаления из строки подстроки. Взята с просторов интернета */
 char* f_(char *src, char *src_)
 {
     char *t;
@@ -61,6 +62,7 @@ char* f_(char *src, char *src_)
     return src;
 }
 
+/* Функция для проверки существования папок и создания, если их не было */
 int dir_exist_check(const char *folder_name, bool &error_flag, std::string &error_message)
 {
     DIR *dir = opendir(folder_name); //Пытаемся открыть директорию с исходными картинками
@@ -94,21 +96,27 @@ int dir_exist_check(const char *folder_name, bool &error_flag, std::string &erro
     return 0;
 }
 
+/* Функция для формирования списка файлов в каталоге, удовлетворящих заданному формату (png, h, и т.д.) */
 int dir_image_directory(const char *folder_name, const char *format, std::vector <std::string> &list)
 {
+    /* Формируем путь до необходимой папки для поулчения списка файлов в ней */
     TCHAR buffer[MAX_PATH];
     GetCurrentDirectory(sizeof(buffer), buffer);
     strcat(buffer, "\\");
     strcat(buffer, folder_name);
     strcat(buffer, "\\*");
 
-    std::cout << buffer << std::endl;
+    std::cout << "Search directory for " << format << ":  " << buffer << std::endl;
 
+    /* Производим настройки и объвялем переменные для ОС Windows */
     setlocale(LC_ALL, "");
     HANDLE search_location;
     WIN32_FIND_DATA founded_file;
     int curent_format_count = 0;
+    
+    std::cout << "The list of files for " << folder_name << " directory:" << std::endl;
 
+    /* Производим поиск файлов формата, записанного в переменную format */
     search_location = FindFirstFile(buffer, &founded_file);
     while (FindNextFile(search_location, &founded_file)) // != NULL
     {
@@ -116,73 +124,77 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
 
         std::string file_name = founded_file.cFileName;
         int pos = -1;
-        if( (pos = file_name.find(format) ) != -1 )
+        if( (pos = file_name.find(format) ) != -1 ) //Если файл соответсвуте формату - добавляем его в список найденных файлов list
         {
             curent_format_count++;
             list.push_back(file_name);
         }
     }
+    std::cout << "Total count of " << format << " files: " << curent_format_count << std::endl << std::endl;
     return curent_format_count;
 }
 
+/* Функция, выполняющая преобразование файлов png в h */
 int convert_png_to_h(int png_count, std::vector <std::string> &list)
 {
     for (int i = 0; i < png_count; i++)
     {
-        char *str = new char[20];
+        /* Формируем имя для будущего файла h */
+        char *str = new char[32];
         strcpy(str, list[i].c_str());
         char *str_cmp = ".png";
         f_(str, str_cmp);
         strcat(str, ".h"); 
 
+        /* Присваиваем переменным именя для последущей передачи в функцию */
         std::string png_filename = "PNGfolder\\" + list[i];
         std::string h_filename = "Hfolder\\" + std::string(str);
-        decodeOneStep(png_filename.c_str(), h_filename.c_str());
+
+        decodeOneStep(png_filename.c_str(), h_filename.c_str()); //Декодирует png-рисунок и создает h-файл с таким же названием
     }
-    //decodeOneStep(filename);
     return 0;
 }
 
 //Example 2
 //Load PNG file from disk to memory first, then decode to raw pixels in memory.
-void decodeTwoSteps(const char *filename)
-{
-    std::vector<unsigned char> png;
-    std::vector<unsigned char> image; //the raw pixels
-    unsigned width, height;
+// void decodeTwoSteps(const char *filename)
+// {
+//     std::vector<unsigned char> png;
+//     std::vector<unsigned char> image; //the raw pixels
+//     unsigned width, height;
 
-    //load and decode
-    unsigned error = lodepng::load_file(png, filename);
-    if (!error)
-        error = lodepng::decode(image, width, height, png);
+//     //load and decode
+//     unsigned error = lodepng::load_file(png, filename);
+//     if (!error)
+//         error = lodepng::decode(image, width, height, png);
 
-    //if there's an error, display it
-    if (error)
-        std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+//     //if there's an error, display it
+//     if (error)
+//         std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
 
-    //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
-}
+//     //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
+// }
 
 //Example 3
 //Load PNG file from disk using a State, normally needed for more advanced usage.
-void decodeWithState(const char *filename)
-{
-    std::vector<unsigned char> png;
-    std::vector<unsigned char> image; //the raw pixels
-    unsigned width, height;
-    lodepng::State state; //optionally customize this one
+// void decodeWithState(const char *filename)
+// {
+//     std::vector<unsigned char> png;
+//     std::vector<unsigned char> image; //the raw pixels
+//     unsigned width, height;
+//     lodepng::State state; //optionally customize this one
 
-    unsigned error = lodepng::load_file(png, filename); //load the image file with given filename
-    if (!error)
-        error = lodepng::decode(image, width, height, state, png);
+//     unsigned error = lodepng::load_file(png, filename); //load the image file with given filename
+//     if (!error)
+//         error = lodepng::decode(image, width, height, state, png);
 
-    //if there's an error, display it
-    if (error)
-        std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+//     //if there's an error, display it
+//     if (error)
+//         std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
 
-    //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
-    //State state contains extra information about the PNG such as text chunks, ...
-}
+//     //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
+//     //State state contains extra information about the PNG such as text chunks, ...
+// }
 
 int main(int argc, char *argv[])
 {
@@ -245,7 +257,7 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
         head_str = head_str + "\n\nstatic const byte IMAGE[COLS][";
         head_str = head_str + std::to_string(width);
         head_str = head_str + "] PROGMEM = {\n{";
-        
+
         fputs(head_str.c_str(), ptrFile);
 
         for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
@@ -282,5 +294,4 @@ void decodeOneStep(const char *png_filename, const char *h_filename)
         fputs("\n};\n\n#endif\n", ptrFile);
         fclose (ptrFile);
     }
-
 }
