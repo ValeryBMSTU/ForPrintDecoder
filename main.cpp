@@ -41,6 +41,26 @@ freely, subject to the following restrictions:
 
 //Example 1
 //Decode from disk to raw pixels with a single function call
+void decodeOneStep(const char *, const char *);
+
+char* f_(char *src, char *src_)
+{
+    char *t;
+
+    do
+    {
+        t = strstr(src, src_);
+        if (t != NULL)
+        {
+            char *t_ = t + strlen(src_);
+            strcpy(t, t_);
+        }
+        else
+            break;
+    } while (true);
+    return src;
+}
+
 int dir_exist_check(const char *folder_name, bool &error_flag, std::string &error_message)
 {
     DIR *dir = opendir(folder_name); //Пытаемся открыть директорию с исходными картинками
@@ -90,7 +110,7 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
     int curent_format_count = 0;
 
     search_location = FindFirstFile(buffer, &founded_file);
-    while (FindNextFile(search_location, &founded_file) != NULL)
+    while (FindNextFile(search_location, &founded_file)) // != NULL
     {
         std::cout << founded_file.cFileName << "\n";
 
@@ -105,36 +125,22 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
     return curent_format_count;
 }
 
-void decodeOneStep(const char *filename)
+int convert_png_to_h(int png_count, std::vector <std::string> &list)
 {
-    std::vector<unsigned char> image; //the raw pixels
-    unsigned width, height;
-
-    //decode
-    unsigned error = lodepng::decode(image, width, height, filename);
-
-    //if there's an error, display it
-    if (error)
-        std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
-
-    //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
-
-    int curent_width = 0;
-
-    for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
+    for (int i = 0; i < png_count; i++)
     {
-        if (curent_width == width)
-        {
-            std::cout << std::endl;
-            curent_width = 0;
-        }
-        else
-        {
-            curent_width++;
-        }
+        char *str = new char[20];
+        strcpy(str, list[i].c_str());
+        char *str_cmp = ".png";
+        f_(str, str_cmp);
+        strcat(str, ".h"); 
 
-        std::cout << *it;
+        std::string png_filename = "PNGfolder\\" + list[i];
+        std::string h_filename = "Hfolder\\" + str;
+        decodeOneStep(png_filename.c_str(), h_filename.c_str());
     }
+    //decodeOneStep(filename);
+    return 0;
 }
 
 //Example 2
@@ -198,11 +204,54 @@ int main(int argc, char *argv[])
     std::vector <std::string> h_list;
 
     if (!error_flag)
+    {
         png_count = dir_image_directory("PNGfolder", png_format, png_list);
-    if (!error_flag)
         h_count = dir_image_directory("Hfolder", h_format, h_list);
     
-    const char *filename = argc > 1 ? argv[1] : "test.png";
-    decodeOneStep(filename);
+        convert_png_to_h(png_count, png_list);
+    }
+
+    //const char *filename = argc > 1 ? argv[1] : "test.png";
+    //decodeOneStep(filename);
     system("pause");
+}
+
+
+void decodeOneStep(const char *png_filename, const char *h_filename)
+{
+    std::vector<unsigned char> image; //the raw pixels
+    unsigned width, height;
+
+    //decode
+    unsigned error = lodepng::decode(image, width, height, png_filename);
+
+    //if there's an error, display it
+    if (error)
+        std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+
+    //the pixels are now in the vector "image", 4 bytes per pixel, ordered RGBARGBA..., use it as texture, draw it, ...
+
+    int curent_width = 0;
+    FILE * ptrFile = fopen(h_filename, "w");
+ 
+    if (ptrFile != NULL)
+    {
+        std::string head_str= "#ifndef IMAGE_H_\n#define IMAGE_H_\n\n#define COLS " + height;
+        head_str = head_str + "\n\nstatic const byte IMAGE[COLS][8] PROGMEM = {\n";
+        fputs(head_str.c_str(), ptrFile);
+
+        for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
+        {
+            if (curent_width == width)
+            {
+                curent_width = 0;
+            }
+            else
+            {
+                curent_width++;
+            }
+        }
+        fclose (ptrFile);
+    }
+
 }
