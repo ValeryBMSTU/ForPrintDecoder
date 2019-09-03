@@ -107,7 +107,7 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
             {
                 curent_width = 0;
                 curent_hight++;
-                if (curent_hight != 10)
+                if (curent_hight != height)
                 {
                     fputs("},\n{", ptrFile);
                 }
