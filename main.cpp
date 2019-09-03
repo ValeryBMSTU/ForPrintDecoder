@@ -13,6 +13,8 @@
 #include "windows.h"
 #include <vector>
 
+#define MAX_COL_LOGS 8
+
 //Decode from disk to raw pixels with a single function call
 void decodeOneStep(const char *, const char *);
 
@@ -201,9 +203,13 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
 
     /* Производим поиск файлов формата, записанного в переменную format */
     search_location = FindFirstFile(buffer, &founded_file);
+    int current_col = 0; //Счетчик колонок для более красивого вывода логов
     while (FindNextFile(search_location, &founded_file)) // != NULL
     {
-        std::cout << founded_file.cFileName << "\n";
+        std::cout << founded_file.cFileName << "\t";
+
+        current_col++;
+        if (current_col == MAX_COL_LOGS) { std::cout << "\n"; current_col = 0; }
 
         std::string file_name = founded_file.cFileName;
         int pos = -1;
@@ -213,7 +219,7 @@ int dir_image_directory(const char *folder_name, const char *format, std::vector
             list.push_back(file_name);
         }
     }
-    std::cout << "Total count of " << format << " files: " << curent_format_count << std::endl << std::endl;
+    std::cout << "\n\n" << "Total count of " << format << " files: " << curent_format_count << "\n";
     return curent_format_count;
 }
 
