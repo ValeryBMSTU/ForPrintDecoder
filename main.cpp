@@ -14,9 +14,14 @@
 #include <vector>
 
 #define MAX_COL_LOGS 8
-#define HEADS_COUNT 2
-#define PIXELS_PER_HEAD 128
+#define HEADS_COUNT 1
+#define PIXELS_PER_HEAD 32
 #define BLACK 0
+
+int pixels_per_head = 0;
+int heads_count = 0;
+
+void readConfig();
 
 //Decode from disk to raw pixels with a single function call
 void decodeOneStep(const char *, const char *);
@@ -49,6 +54,8 @@ int main(int argc, char *argv[]) {
     std::vector <std::string> png_list;
     std::vector <std::string> h_list;
 
+    readConfig();
+
     if (!error_flag)
     {
         png_count = dir_image_directory("PNGfolder", png_format, png_list);
@@ -61,6 +68,22 @@ int main(int argc, char *argv[]) {
     system("pause");
 }
 
+void readConfig() {
+    std::string parametr;
+    std::ifstream file("config.txt");
+    if (file.is_open()) { 
+        std::getline(file, parametr);
+        heads_count = atoi(parametr.c_str());
+        std::getline(file, parametr);
+        pixels_per_head = atoi(parametr.c_str());
+    } else {
+        std::ofstream ofile;
+        ofile.open("config.txt");
+        ofile << "2\n32\n";
+        heads_count = 2;
+        pixels_per_head = 32;
+    }
+}
 
 void decodeOneStep(const char *png_filename, const char *h_filename) {
     std::vector<unsigned char> image; //the raw pixels
@@ -97,17 +120,18 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
 
             if (!in_chunck) {
                 chunck = new chunck_struct;
-                chunck->x1 = curent_width + (curent_hight * width);
-                chunck->x2 = curent_width + (curent_hight * width);
+                in_chunck = true;
+                chunck->x1 = curent_width;
+                chunck->x2 = curent_width;
                 chunck->y1 = curent_hight;
                 chunck->y2 = curent_hight;
                 curent_chunck_hight = 1;
             } else {
                 if (curent_width < chunck->x1) {
-                    chunck->x1 = curent_width + (curent_hight * width);
+                    chunck->x1 = curent_width;
                 }
                 if (curent_width > chunck->x2) {
-                    chunck->x2 = curent_width + (curent_hight * width);
+                    chunck->x2 = curent_width;
                 }
                 if (curent_hight < chunck->y1) {
                     chunck->y1 = curent_hight;
@@ -116,18 +140,17 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
                     chunck->y2 = curent_hight;
                 }
             }
-                        
-            if (curent_width == width) //Условия для перехода на следующую строку
-            {
-                curent_width = 0;
-                curent_hight++;
-                if(in_chunck) {
-                    curent_chunck_hight++;
-                    if (curent_chunck_hight > HEADS_COUNT * PIXELS_PER_HEAD) {
-                        image_chunks.push_back(chunck);
-                        curent_chunck_hight = 0;
-                        in_chunck = false;
-                    }
+        }      
+        if (curent_width == width) //Условия для перехода на следующую строку
+        {
+            curent_width = 0;
+            curent_hight++;
+            if(in_chunck) {
+                curent_chunck_hight++;
+                if (curent_chunck_hight > heads_count * pixels_per_head) {
+                    image_chunks.push_back(chunck);
+                    curent_chunck_hight = 0;
+                    in_chunck = false;
                 }
             }
         }
@@ -166,9 +189,14 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
             curent_width++;
 
             if (!in_chunck) {
+
                 chunck = *chunck_iter;
                 in_chunck = true;
-                //it = (chunck->x1 - 1 + (chunck->y2 * width)); // Problem here
+                curent_width = chunck->x1;
+                it = image.begin() + ( (chunck->x1 - 1 + (chunck->y1 * width) ) * 4);
+
+                std::string coordinates = std::to_string(chunck->x1) + ',' + std::to_string(chunck->y1) + ',' + std::to_string(chunck->x2) + ',' + std::to_string(chunck->y2) + "},\n{";
+                fputs(coordinates.c_str(), ptrFile);
             }
 
             if (*it == black)
@@ -180,11 +208,15 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
                 fputs("0b11111111", ptrFile); //Белый пиксель
             }
             
-            if (curent_width == chunck->y2) //Условия для перехода к формированию следующей строки пикселей
+            if (curent_width == chunck->x2) //Условия для перехода к формированию следующей строки пикселей
             {
-                curent_width = 0;
+                curent_width = chunck->x1;
                 curent_hight++;
-                if (curent_hight != height)
+                curent_chunck_hight++;
+
+                it = image.begin() + ( (chunck->x1 - 1 + ( (chunck->y1 + curent_chunck_hight) * width) ) * 4);
+
+                if (chunck_iter + 1 != image_chunks.end())
                 {
                     fputs("},\n{", ptrFile);
                 }
@@ -195,45 +227,53 @@ void decodeOneStep(const char *png_filename, const char *h_filename) {
             }
             else
             {
-                if (curent_width != width)
+                if (curent_width != chunck->x2)
                     fputs(",", ptrFile);
+            }
+            if (curent_chunck_hight == heads_count * pixels_per_head) {
+                curent_chunck_hight = 0;
+                chunck_iter++;
+                if (chunck_iter == image_chunks.end()) {
+                    break;
+                }
+                in_chunck = false;
             }
         }
 
 
 
         /* Формируем матрицу пикселей по старой версии */
-        for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
-        {
-            curent_width++;
-            if (*it == black)
-            {
-                fputs("0b00000000", ptrFile); //Черный пиксель
-            }
-            else
-            {
-                fputs("0b11111111", ptrFile); //Белый пиксель
-            }
+        // for (std::vector<unsigned char>::iterator it = image.begin(); it != image.end(); it = it + 4)
+        // {
+        //     curent_width++;
+        //     if (*it == black)
+        //     {
+        //         fputs("0b00000000", ptrFile); //Черный пиксель
+        //     }
+        //     else
+        //     {
+        //         fputs("0b11111111", ptrFile); //Белый пиксель
+        //     }
             
-            if (curent_width == width) //Условия для перехода к формированию следующей строки пикселей
-            {
-                curent_width = 0;
-                curent_hight++;
-                if (curent_hight != height)
-                {
-                    fputs("},\n{", ptrFile);
-                }
-                else
-                {
-                    fputs("}", ptrFile);
-                }
-            }
-            else
-            {
-                if (curent_width != width)
-                    fputs(",", ptrFile);
-            }
-        }
+        //     if (curent_width == width) //Условия для перехода к формированию следующей строки пикселей
+        //     {
+        //         curent_width = 0;
+        //         curent_hight++;
+        //         if (curent_hight != height)
+        //         {
+        //             fputs("},\n{", ptrFile);
+        //         }
+        //         else
+        //         {
+        //             fputs("}", ptrFile);
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (curent_width != width)
+        //             fputs(",", ptrFile);
+        //     }
+        // }
 
 
 
